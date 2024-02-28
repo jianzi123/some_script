@@ -1,0 +1,75 @@
+﻿﻿https://github.com/microsoft/DeepSpeedExamples/tree/master/benchmarks/communication﻿
+
+
+
+apiVersion﻿: "kubeflow.org/v1"
+kind﻿: PyTorchJob
+metadata:
+  name﻿: ds-nccl-test
+  namespace﻿: default
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas﻿: 1
+      restartPolicy﻿: OnFailure
+      template:
+        spec:
+          containers:
+            - name﻿: pytorch
+              image﻿: pytorch:22.08-py3-ds-example
+              resources:
+                limits:
+                  nvidia.com/gpu﻿: 8
+                  rdma/hca﻿: "1"
+              env:
+                - name﻿: NCCL_DEBUG
+                  value﻿: INFO
+                - name﻿: NCCL_IB_DISABLE
+                  value﻿: "0"
+              command:
+              - /bin/bash
+              - -c
+              - cd /workspace/DeepSpeedExamples/benchmarks/communication && NCCL_DEBUG=INFO torchrun -﻿-nnodes $WORLD_SIZE -﻿-node_rank $RANK -﻿-nproc_per_node 8 -﻿-master_addr $MASTER_ADDR -﻿-master_port $MASTER_PORT all_reduce.py -﻿-warmups 5 -﻿-trials 400 -﻿-dist torch -﻿-maxsize=28 -﻿-debug -﻿-scan
+              volumeMounts:
+                - mountPath﻿: /dev/shm
+                  name﻿: shm
+              securityContext:
+                capabilities:
+                  add﻿: [﻿"IPC_LOCK"﻿]
+          schedulerName﻿: volcano
+          volumes:
+            - hostPath:
+                path﻿: /dev/shm
+              name﻿: shm
+    Worker:
+      replicas﻿: 3
+      restartPolicy﻿: OnFailure
+      template:
+        spec:
+          containers:
+            - name﻿: pytorch
+              image﻿: pytorch:22.08-py3-ds-example
+              env:
+                - name﻿: NCCL_DEBUG
+                  value﻿: INFO
+                - name﻿: NCCL_IB_DISABLE
+                  value﻿: "0"
+              resources:
+                limits:
+                  nvidia.com/gpu﻿: "8"
+                  rdma/hca﻿: "1"
+              command:
+              - /bin/bash
+              - -c
+              - cd /workspace/DeepSpeedExamples/benchmarks/communication && NCCL_DEBUG=INFO torchrun -﻿-nnodes $WORLD_SIZE -﻿-node_rank $RANK -﻿-nproc_per_node 8 -﻿-master_addr $MASTER_ADDR -﻿-master_port $MASTER_PORT all_reduce.py -﻿-warmups 5 -﻿-trials 400 -﻿-dist torch -﻿-maxsize=28 -﻿-debug -﻿-scan
+              volumeMounts:
+                - mountPath﻿: /dev/shm
+                  name﻿: shm
+              securityContext:
+                capabilities:
+                  add﻿: [﻿"IPC_LOCK"﻿]
+          schedulerName﻿: volcano
+          volumes:
+            - hostPath:
+                path﻿: /dev/shm
+              name﻿: shm
